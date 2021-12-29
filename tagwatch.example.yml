@@ -18,3 +18,6 @@ tagwatch:
     repo: gitea/gitea
     tags:
       - ^1\.15$
+
+server:
+  addr: "localhost:8000"

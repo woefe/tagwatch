@@ -19,8 +19,13 @@ type WatchConf struct {
 	Tags     []string  `yaml:"tags"`
 }
 
+type Server struct {
+	Addr string `yaml:"addr"`
+}
+
 type Conf struct {
 	Tagwatch []*WatchConf `yaml:"tagwatch"`
+	Server *Server `yaml:"server"`
 }
 
 func LoadConf(filename string) (*Conf, error) {

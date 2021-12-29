@@ -20,6 +20,6 @@ func main() {
 			return
 		}
 	case "serve":
-		// TODO
+		tagwatch.Serve(conf)
 	}
 }
