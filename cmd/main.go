@@ -1,27 +1,25 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"tagwatch"
 )
 
-func makeGuid(taggedDigest tagwatch.TagDigest) string {
-	return taggedDigest.Digest + taggedDigest.Tag
-}
-
 func main() {
-	feed := tagwatch.NewFeed("Docker registry tags", "https://hub.docker.com", "new tags for patterns")
-	repo := "library/ubuntu"
-	arch := "amd64"
-	for _, taggedDigest := range tagwatch.ListTags(repo, arch, []string{"20\\.04"}) {
-		fmt.Println(taggedDigest.Digest, taggedDigest.Tag)
-		feed.AppendItems(&tagwatch.Item{
-			Title:       fmt.Sprintf("%s in %s (%s)", taggedDigest.Tag, repo, arch),
-			Link:        "",
-			Description: taggedDigest.Tag + ": " + taggedDigest.Digest,
-			Guid:        makeGuid(taggedDigest),
-		})
+	conf, err := tagwatch.LoadConf("tagwatch.example.yml")
+	if err != nil {
+		log.Fatalln(err)
+		return
 	}
-	os.Stdout.Write(feed.ToXML())
+	switch os.Args[1] {
+	case "run":
+		_, err := os.Stdout.Write(*tagwatch.MakeFeed(conf))
+		if err != nil {
+			log.Fatalln(err)
+			return
+		}
+	case "serve":
+		// TODO
+	}
 }

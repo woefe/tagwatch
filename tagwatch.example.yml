@@ -1,0 +1,20 @@
+registries:
+  - &docker_hub
+    auth: true
+    auth_url: "https://auth.docker.io/token?service=registry.docker.io"
+    base_url: "https://registry.hub.docker.com/v2/"
+
+default: &default
+  watch_new: true
+  registry: *docker_hub
+  arch: "amd64"
+
+tagwatch:
+  - <<: *default
+    repo: library/ubuntu
+    tags:
+      - 20\.04
+  - <<: *default
+    repo: gitea/gitea
+    tags:
+      - ^1\.15$

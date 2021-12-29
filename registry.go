@@ -41,8 +41,23 @@ type TagDigest struct {
 	Digest string
 }
 
-func get(url string, result interface{}, headers map[string]string) error {
-	client := http.Client{Timeout: 60 * time.Second}
+type RegistryClient struct {
+	client  http.Client
+	Auth    bool
+	AuthURL string
+	BaseURL string
+}
+
+func NewRegistryClient(auth bool, authURL string, baseURL string) *RegistryClient {
+	return &RegistryClient{
+		client:  http.Client{Timeout: 60 * time.Second},
+		Auth:    auth,
+		AuthURL: authURL,
+		BaseURL: baseURL,
+	}
+}
+
+func (c *RegistryClient) get(url string, result interface{}, headers map[string]string) error {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -51,9 +66,9 @@ func get(url string, result interface{}, headers map[string]string) error {
 	for key, value := range headers {
 		request.Header.Add(key, value)
 	}
-	request.Header.Set("User-Agent", "registry-update-check/1.0")
+	request.Header.Set("User-Agent", "tagwatch/1.0")
 
-	response, err := client.Do(request)
+	response, err := c.client.Do(request)
 	if err != nil {
 		return err
 	}
@@ -86,22 +101,24 @@ func matchesAny(tagPattern []string, str string) bool {
 	return false
 }
 
-func ListTags(repo, architecture string, tagPattern []string) []TagDigest {
-	var authResponse AuthResponse
-	url := "https://auth.docker.io/token?service=registry.docker.io&scope=repository:" + repo + ":pull"
-	if err := get(url, &authResponse, nil); err != nil {
-		log.Fatalln(err)
-		return nil
+func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string) []TagDigest {
+	headers := map[string]string{
+		"Accept": "application/vnd.docker.distribution.manifest.list.v2+json",
 	}
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + authResponse.Token,
-		"Accept":        "application/vnd.docker.distribution.manifest.list.v2+json",
+	if c.Auth {
+		var authResponse AuthResponse
+		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, nil)
+		if err != nil {
+			log.Fatalln(err)
+			return nil
+		}
+		headers["Authorization"] = "Bearer " + authResponse.Token
 	}
 
 	var tagsResponse TagsResponse
-	url = "https://registry.hub.docker.com/v2/" + repo + "/tags/list"
-	if err := get(url, &tagsResponse, headers); err != nil {
+	url := c.BaseURL + repo + "/tags/list"
+	if err := c.get(url, &tagsResponse, headers); err != nil {
 		log.Fatalln(err)
 		return nil
 	}
@@ -120,8 +137,8 @@ func ListTags(repo, architecture string, tagPattern []string) []TagDigest {
 			}
 
 			var manifestResponse ManifestResponse
-			url := "https://registry.hub.docker.com/v2/" + repo + "/manifests/latest"
-			if err := get(url, &manifestResponse, headers); err != nil {
+			url := c.BaseURL + repo + "/manifests/" + tag
+			if err := c.get(url, &manifestResponse, headers); err != nil {
 				log.Fatalln(err)
 				return
 			}
