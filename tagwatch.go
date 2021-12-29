@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+const (
+	Version  = "1.0"
+	AgentStr = "tagwatch/" + Version
+)
+
 func makeGuid(taggedDigest TagDigest, reg *Registry, repo string, arch string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(reg.BaseURL))
@@ -33,6 +38,21 @@ func makeDescription(watches []*WatchConf) string {
 	return b.String()
 }
 
+func makeLink(baseUrl string, repo string, taggedDigest TagDigest) string {
+	if baseUrl != "https://registry.hub.docker.com/v2/" {
+		return baseUrl + repo + "/manifests/" + taggedDigest.Tag
+	}
+	if strings.HasPrefix(repo, "library/") {
+		repo = strings.TrimPrefix(repo, "library/") + "/" + repo
+	}
+	return fmt.Sprintf(
+		"https://hub.docker.com/layers/%s/%s/images/%s?context=explore",
+		repo,
+		taggedDigest.Tag,
+		strings.Replace(taggedDigest.Digest, ":", "-", 1),
+	)
+}
+
 func MakeFeed(conf *Conf) *[]byte {
 	feed := NewFeed("Docker registry tags", "https://github.com/woefe/tagwatch", makeDescription(conf.Tagwatch))
 	for _, watchConf := range conf.Tagwatch {
@@ -41,14 +61,14 @@ func MakeFeed(conf *Conf) *[]byte {
 		reg := watchConf.Registry
 		client := NewRegistryClient(reg.Auth, reg.AuthURL, reg.BaseURL)
 		for _, taggedDigest := range client.ListTags(repo, arch, watchConf.Tags) {
-			feed.AppendItems(&Item{
-				Title:       fmt.Sprintf("%s in %s (%s)", taggedDigest.Tag, repo, arch),
-				Link:        "",
-				Description: taggedDigest.Tag + ": " + taggedDigest.Digest,
-				Guid:        makeGuid(taggedDigest, reg, repo, arch),
-			})
+			feed.AppendItems(NewItem(
+				fmt.Sprintf("%s in %s (%s)", taggedDigest.Tag, repo, arch),
+				makeLink(reg.BaseURL, repo, taggedDigest),
+				taggedDigest.Tag+": "+taggedDigest.Digest,
+				makeGuid(taggedDigest, reg, repo, arch),
+			))
 		}
 	}
-	xml:= feed.ToXML()
+	xml := feed.ToXML()
 	return &xml
 }

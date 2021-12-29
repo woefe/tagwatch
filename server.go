@@ -12,7 +12,7 @@ var emptyFeed = []byte(`<rss version="2.0">
     <title>Docker registry tags</title>
     <link>https://github.com/woefe/tagwatch</link>
     <description>No tags available</description>
-    <generator>tagwatch/1.0</generator>
+    <generator>` + AgentStr + `</generator>
   </channel>
 </rss>`)
 var feedXML = &emptyFeed
@@ -23,9 +23,12 @@ func handleFeed(resp http.ResponseWriter, req *http.Request) {
 	feedMutex.Lock()
 	defer feedMutex.Unlock()
 	if req.Method != http.MethodGet {
-		log.Fatalln("Invalid Request")
+		log.Println("Invalid Request")
+		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	headers := resp.Header()
+	headers["Content-Type"] = []string{"application/xml"}
 	_, err := resp.Write(*feedXML)
 	if err != nil {
 		log.Fatalln(err)

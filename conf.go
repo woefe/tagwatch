@@ -25,7 +25,7 @@ type Server struct {
 
 type Conf struct {
 	Tagwatch []*WatchConf `yaml:"tagwatch"`
-	Server *Server `yaml:"server"`
+	Server   *Server      `yaml:"server"`
 }
 
 func LoadConf(filename string) (*Conf, error) {
