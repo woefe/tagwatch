@@ -11,13 +11,19 @@ func usage() {
 }
 
 func main() {
-	conf, err := LoadConf("tagwatch.example.yml")
-	if err != nil {
-		log.Fatalln(err)
-	}
 	if len(os.Args) != 2 {
 		usage()
 	}
+
+	confPath, exists := os.LookupEnv("TAGWATCH_CONF")
+	if !exists {
+		confPath = "tagwatch.yml"
+	}
+	conf, err := LoadConf(confPath)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	switch os.Args[1] {
 	case "run":
 		_, err := os.Stdout.Write(*MakeFeed(conf))
