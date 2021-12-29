@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"tagwatch"
 )
 
 func usage() {
@@ -12,7 +11,7 @@ func usage() {
 }
 
 func main() {
-	conf, err := tagwatch.LoadConf("tagwatch.example.yml")
+	conf, err := LoadConf("tagwatch.example.yml")
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -21,15 +20,15 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "run":
-		_, err := os.Stdout.Write(*tagwatch.MakeFeed(conf))
+		_, err := os.Stdout.Write(*MakeFeed(conf))
 		if err != nil {
 			log.Fatalln(err)
 		}
 	case "serve":
-		tagwatch.Serve(conf)
+		Serve(conf)
 	case "version":
 		fmt.Print("tagwatch version ")
-		fmt.Println(tagwatch.Version)
+		fmt.Println(Version)
 	default:
 		usage()
 	}

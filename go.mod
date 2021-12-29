@@ -1,4 +1,4 @@
-module tagwatch
+module github.com/woefe/tagwatch
 
 go 1.17
 

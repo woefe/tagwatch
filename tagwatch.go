@@ -1,4 +1,4 @@
-package tagwatch
+package main
 
 import (
 	"crypto/sha256"
