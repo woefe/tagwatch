@@ -20,4 +20,4 @@ tagwatch:
       - ^1\.15$
 
 server:
-  addr: "localhost:8000"
+  addr: ":8080"
