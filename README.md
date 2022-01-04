@@ -18,3 +18,8 @@ git clone https://github.com/woefe/tagwatch
 cd tagwatch
 go build
 ```
+
+## Licenses
+Tagwatch is licensed under [GPLv3+](./COPYING).
+
+Tagwatch uses [go-yaml/yaml](https://github.com/go-yaml/yaml/tree/v2).
