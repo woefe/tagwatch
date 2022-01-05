@@ -76,7 +76,7 @@ func MakeFeed(conf *Conf) *[]byte {
 			feed.AppendItems(NewItem(
 				title,
 				makeLink(reg.BaseURL, repo, taggedDigest),
-				"<p>Digest of "+title+" changed. Digest now is:</p><pre>"+taggedDigest.Digest+"</pre>",
+				"<p>Digest of <em>"+title+"</em> has changed. New digest is:</p><pre>"+taggedDigest.Digest+"</pre>",
 				makeGuid(taggedDigest, reg, repo, arch),
 			))
 		}
