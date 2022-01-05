@@ -19,6 +19,13 @@ cd tagwatch
 go build
 ```
 
+## Limitations
+Every checked tag counts as a pull according to the rate limitation mechanism employed at the Docker Hub.
+Hence, be careful which tag patterns you watch with tagwatch.
+A simple `.*` pattern will instantly consume all pulls of the free tier in many cases!
+
+As of now, tagwatch is only tested with the Docker Hub registry.
+
 ## Licenses
 Tagwatch is licensed under [GPLv3+](./COPYING).
 
