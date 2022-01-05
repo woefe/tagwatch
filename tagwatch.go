@@ -70,7 +70,7 @@ func MakeFeed(conf *Conf) *[]byte {
 		repo := watchConf.Repo
 		arch := watchConf.Arch
 		reg := watchConf.Registry
-		client := NewRegistryClient(reg.Auth, reg.AuthURL, reg.BaseURL)
+		client := NewRegistryClientFromConf(reg)
 		for _, taggedDigest := range client.ListTags(repo, arch, watchConf.Tags) {
 			title := fmt.Sprintf("%s:%s (%s)", repo, taggedDigest.Tag, arch)
 			feed.AppendItems(NewItem(

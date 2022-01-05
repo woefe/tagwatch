@@ -6,9 +6,11 @@ import (
 )
 
 type Registry struct {
-	Auth    bool   `yaml:"auth"`
-	AuthURL string `yaml:"auth_url"`
-	BaseURL string `yaml:"base_url"`
+	Auth         bool   `yaml:"auth"`
+	AuthUsername string `yaml:"username"`
+	AuthPassword string `yaml:"password"`
+	AuthURL      string `yaml:"auth_url"`
+	BaseURL      string `yaml:"base_url"`
 }
 
 type WatchConf struct {

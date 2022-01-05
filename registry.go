@@ -42,22 +42,26 @@ type TagDigest struct {
 }
 
 type RegistryClient struct {
-	client  http.Client
-	Auth    bool
-	AuthURL string
-	BaseURL string
+	client       http.Client
+	Auth         bool
+	AuthUsername string
+	AuthPassword string
+	AuthURL      string
+	BaseURL      string
 }
 
-func NewRegistryClient(auth bool, authURL string, baseURL string) *RegistryClient {
+func NewRegistryClientFromConf(reg *Registry) *RegistryClient {
 	return &RegistryClient{
-		client:  http.Client{Timeout: 60 * time.Second},
-		Auth:    auth,
-		AuthURL: authURL,
-		BaseURL: baseURL,
+		client:       http.Client{Timeout: 60 * time.Second},
+		Auth:         reg.Auth,
+		AuthUsername: reg.AuthUsername,
+		AuthPassword: reg.AuthPassword,
+		AuthURL:      reg.AuthURL,
+		BaseURL:      reg.BaseURL,
 	}
 }
 
-func (c *RegistryClient) get(url string, result interface{}, headers map[string]string) error {
+func (c *RegistryClient) get(url string, result interface{}, basicAuth bool, headers map[string]string) error {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -67,6 +71,10 @@ func (c *RegistryClient) get(url string, result interface{}, headers map[string]
 		request.Header.Add(key, value)
 	}
 	request.Header.Set("User-Agent", AgentStr)
+
+	if basicAuth && c.AuthUsername != "" && c.AuthPassword != "" {
+		request.SetBasicAuth(c.AuthUsername, c.AuthPassword)
+	}
 
 	response, err := c.client.Do(request)
 	if err != nil {
@@ -108,7 +116,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 
 	if c.Auth {
 		var authResponse AuthResponse
-		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, nil)
+		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, true, nil)
 		if err != nil {
 			log.Println(err)
 			return nil
@@ -118,7 +126,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 
 	var tagsResponse TagsResponse
 	url := c.BaseURL + repo + "/tags/list"
-	if err := c.get(url, &tagsResponse, headers); err != nil {
+	if err := c.get(url, &tagsResponse, false, headers); err != nil {
 		log.Println(err)
 		return nil
 	}
@@ -138,7 +146,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 
 			var manifestResponse ManifestResponse
 			url := c.BaseURL + repo + "/manifests/" + tag
-			if err := c.get(url, &manifestResponse, headers); err != nil {
+			if err := c.get(url, &manifestResponse, false, headers); err != nil {
 				log.Println(err)
 				return
 			}

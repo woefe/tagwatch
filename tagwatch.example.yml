@@ -1,6 +1,9 @@
 registries:
   - &docker_hub
     auth: true
+    # Uncomment below to use your Docker Hub account instead of anonymous access
+    # username: <username>
+    # password: <token>
     auth_url: "https://auth.docker.io/token?service=registry.docker.io"
     base_url: "https://registry.hub.docker.com/v2/"
 
