@@ -72,10 +72,11 @@ func MakeFeed(conf *Conf) *[]byte {
 		reg := watchConf.Registry
 		client := NewRegistryClient(reg.Auth, reg.AuthURL, reg.BaseURL)
 		for _, taggedDigest := range client.ListTags(repo, arch, watchConf.Tags) {
+			title := fmt.Sprintf("%s:%s (%s)", repo, taggedDigest.Tag, arch)
 			feed.AppendItems(NewItem(
-				fmt.Sprintf("%s in %s (%s)", taggedDigest.Tag, repo, arch),
+				title,
 				makeLink(reg.BaseURL, repo, taggedDigest),
-				taggedDigest.Tag+": "+taggedDigest.Digest,
+				"<p>Digest of "+title+" changed. Digest now is:</p><pre>"+taggedDigest.Digest+"</pre>",
 				makeGuid(taggedDigest, reg, repo, arch),
 			))
 		}
