@@ -7,15 +7,8 @@ import (
 	"time"
 )
 
-var emptyFeed = []byte(`<rss version="2.0">
-  <channel>
-    <title>Docker registry tags</title>
-    <link>https://github.com/woefe/tagwatch</link>
-    <description>No tags available</description>
-    <generator>` + AgentStr + `</generator>
-  </channel>
-</rss>`)
-var feedXML = &emptyFeed
+var emptyFeedBytes = []byte(EmptyFeed)
+var feedXML = &emptyFeedBytes
 var feedMutex sync.Mutex
 var conf *Conf
 
@@ -31,7 +24,7 @@ func handleFeed(resp http.ResponseWriter, req *http.Request) {
 	headers["Content-Type"] = []string{"application/xml"}
 	_, err := resp.Write(*feedXML)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 }
 

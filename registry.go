@@ -66,7 +66,7 @@ func (c *RegistryClient) get(url string, result interface{}, headers map[string]
 	for key, value := range headers {
 		request.Header.Add(key, value)
 	}
-	request.Header.Set("User-Agent", "tagwatch/1.0")
+	request.Header.Set("User-Agent", AgentStr)
 
 	response, err := c.client.Do(request)
 	if err != nil {
@@ -92,7 +92,7 @@ func matchesAny(tagPattern []string, str string) bool {
 	for _, pattern := range tagPattern {
 		matched, err := regexp.MatchString(pattern, str)
 		if err != nil {
-			log.Fatalln(err)
+			log.Println(err)
 		}
 		if matched {
 			return true
@@ -110,7 +110,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 		var authResponse AuthResponse
 		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, nil)
 		if err != nil {
-			log.Fatalln(err)
+			log.Println(err)
 			return nil
 		}
 		headers["Authorization"] = "Bearer " + authResponse.Token
@@ -119,7 +119,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 	var tagsResponse TagsResponse
 	url := c.BaseURL + repo + "/tags/list"
 	if err := c.get(url, &tagsResponse, headers); err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 			var manifestResponse ManifestResponse
 			url := c.BaseURL + repo + "/manifests/" + tag
 			if err := c.get(url, &manifestResponse, headers); err != nil {
-				log.Fatalln(err)
+				log.Println(err)
 				return
 			}
 			results <- struct {

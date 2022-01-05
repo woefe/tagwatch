@@ -4,12 +4,23 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 )
 
 const (
-	Version  = "1.0"
-	AgentStr = "tagwatch/" + Version
+	Version   = "1.0"
+	AgentStr  = "tagwatch/" + Version
+	EmptyFeed = `
+		<rss version="2.0">
+			<channel>
+				<title>Docker registry tags</title>
+				<link>https://github.com/woefe/tagwatch</link>
+				<description>No tags available</description>
+				<generator>` + AgentStr + `</generator>
+			</channel>
+		</rss>
+	`
 )
 
 func makeGuid(taggedDigest TagDigest, reg *Registry, repo string, arch string) string {
@@ -69,6 +80,10 @@ func MakeFeed(conf *Conf) *[]byte {
 			))
 		}
 	}
-	xml := feed.ToXML()
+	xml, err := feed.ToXML()
+	if err != nil {
+		log.Println(err)
+		xml = []byte(EmptyFeed)
+	}
 	return &xml
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/xml"
-	"log"
 	"time"
 )
 
@@ -66,10 +65,10 @@ func (feed *Feed) AppendItems(items ...*Item) {
 	feed.Channel.Items = append(feed.Channel.Items, items...)
 }
 
-func (feed *Feed) ToXML() []byte {
+func (feed *Feed) ToXML() ([]byte, error) {
 	output, err := xml.MarshalIndent(feed, "", "  ")
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
-	return output
+	return output, nil
 }
