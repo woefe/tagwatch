@@ -12,6 +12,8 @@ default: &default
   registry: *docker_hub
   arch: "amd64"
 
+# Configures which tags of which repositories and registries should appear in the generated feed.
+# Note that "official" images on Docker Hub should be configured as `library/...` (e.g. library/nginx, library/debian).
 tagwatch:
   - <<: *default
     repo: library/ubuntu
@@ -20,7 +22,9 @@ tagwatch:
   - <<: *default
     repo: gitea/gitea
     tags:
+      - ^latest$
       - ^1\.15$
 
+# Configures the web server that is serving the generated feed with `tagwatch serve`.
 server:
   addr: ":8080"

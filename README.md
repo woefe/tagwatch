@@ -8,15 +8,23 @@ Alternatively, the config can be read from the path configured in the `TAGWATCH_
 
 ## Installation
 ### From Docker Hub
+Checks configured tags every 12 hours and serves the generated feed on http://container.ip:8080/feed.xml
 ```bash
 docker run -v $PWD/tagwatch.yml:/tagwatch.yml woefe/tagwatch:latest
 ```
 
 ### Manually
 ```bash
+# Clone and build tagwatch
 git clone https://github.com/woefe/tagwatch
 cd tagwatch
 go build
+
+# Show help
+./tagwatch help
+
+# Print the generated feed for the example config once
+TAGWATCH_CONF=tagwatch.example.yml ./tagwatch run
 ```
 
 ## Limitations
