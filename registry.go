@@ -46,6 +46,7 @@ type RegistryClient struct {
 	Auth         bool
 	AuthUsername string
 	AuthPassword string
+	AuthToken    string
 	AuthURL      string
 	BaseURL      string
 }
@@ -61,19 +62,21 @@ func NewRegistryClientFromConf(reg *Registry) *RegistryClient {
 	}
 }
 
-func (c *RegistryClient) get(url string, result interface{}, basicAuth bool, headers map[string]string) error {
+func (c *RegistryClient) get(url string, result interface{}, basicAuth bool) error {
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 
-	for key, value := range headers {
-		request.Header.Add(key, value)
-	}
 	request.Header.Set("User-Agent", AgentStr)
+	request.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
 
 	if basicAuth && c.AuthUsername != "" && c.AuthPassword != "" {
 		request.SetBasicAuth(c.AuthUsername, c.AuthPassword)
+	}
+
+	if c.Auth && c.AuthToken != "" {
+		request.Header.Set("Authorization", "Bearer "+c.AuthToken)
 	}
 
 	response, err := c.client.Do(request)
@@ -109,34 +112,34 @@ func matchesAny(tagPattern []string, str string) bool {
 	return false
 }
 
-func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string) []TagDigest {
-	headers := map[string]string{
-		"Accept": "application/vnd.docker.distribution.manifest.list.v2+json",
-	}
-
+func (c *RegistryClient) Login(repo string) {
 	if c.Auth {
 		var authResponse AuthResponse
-		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, true, nil)
+		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, true)
 		if err != nil {
 			log.Println(err)
-			return nil
 		}
-		headers["Authorization"] = "Bearer " + authResponse.Token
+		c.AuthToken = authResponse.Token
 	}
+}
 
+func (c *RegistryClient) ListTags(repo string) []string {
 	var tagsResponse TagsResponse
 	url := c.BaseURL + repo + "/tags/list"
-	if err := c.get(url, &tagsResponse, false, headers); err != nil {
+	if err := c.get(url, &tagsResponse, false); err != nil {
 		log.Println(err)
 		return nil
 	}
+	return tagsResponse.Tags
+}
 
+func (c *RegistryClient) ListTagDigests(repo, architecture string, allTags, tagPattern []string) []TagDigest {
 	wg := sync.WaitGroup{}
 	results := make(chan struct {
 		tag      string
 		response ManifestResponse
 	})
-	for _, tag := range tagsResponse.Tags {
+	for _, tag := range allTags {
 		wg.Add(1)
 		go func(tag string) {
 			defer wg.Done()
@@ -146,7 +149,7 @@ func (c *RegistryClient) ListTags(repo, architecture string, tagPattern []string
 
 			var manifestResponse ManifestResponse
 			url := c.BaseURL + repo + "/manifests/" + tag
-			if err := c.get(url, &manifestResponse, false, headers); err != nil {
+			if err := c.get(url, &manifestResponse, false); err != nil {
 				log.Println(err)
 				return
 			}
