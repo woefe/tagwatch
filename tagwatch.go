@@ -24,7 +24,7 @@ const (
 			</channel>
 		</rss>
 	`
-	tagsItemTemplate        = `New tags available for <em>{{ .Repo }}</em>:<br/>{{ range $idx, $element := .Tags }}{{ if $idx }}, {{ end }}<code>{{ $element }}</code>{{ else }}<em>no tags available</em>{{ end }}`
+	tagsItemTemplate        = `Available tags of <em>{{ .Repo }}</em> have changed. Current tags are:<br/><ul>{{ range .Tags }}<li><code>{{ . }}</code></li>{{ end }}</ul>`
 	feedDescriptionTemplate = "New tags for{{ range . }}\n  - {{ .Repo }}({{ .Arch }})): {{ join .Tags \", \" }}{{ end }}"
 )
 
@@ -112,7 +112,7 @@ func MakeFeed(conf *Conf) *[]byte {
 		sort.Sort(sort.Reverse(ByVersion(allTags)))
 		if watchConf.WatchNew {
 			feed.AppendItems(NewItem(
-				"New tags for "+repo,
+				"Available tags of "+html.EscapeString(repo)+" have changed",
 				makeTagsLink(reg.BaseURL, repo),
 				makeTagsDescription(tagsTpl, repo, allTags),
 				makeGuid(repo, allTags...),
