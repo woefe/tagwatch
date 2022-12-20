@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"regexp"
@@ -88,7 +88,7 @@ func (c *RegistryClient) get(url string, result interface{}, basicAuth bool) err
 		return fmt.Errorf("request failed with status code %d", response.StatusCode)
 	}
 
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return err
 	}

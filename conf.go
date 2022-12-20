@@ -1,8 +1,8 @@
 package main
 
 import (
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"gopkg.in/yaml.v3"
+	"os"
 )
 
 type Registry struct {
@@ -33,7 +33,7 @@ type Conf struct {
 func LoadConf(filename string) (*Conf, error) {
 	conf := &Conf{}
 
-	fileContents, err := ioutil.ReadFile(filename)
+	fileContents, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
