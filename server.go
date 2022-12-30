@@ -56,7 +56,7 @@ func refreshFeed() {
 func backgroundGenerator() {
 	lastRun := time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
 	for {
-		if lastRun.Add(12 * time.Hour).Before(time.Now()) {
+		if lastRun.Add(2 * time.Hour).Before(time.Now()) {
 			lastRun = time.Now()
 			log.Println("Refreshing feed...")
 			refreshFeed()

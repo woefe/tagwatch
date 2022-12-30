@@ -47,6 +47,17 @@ const (
 	feedDescriptionTemplate = "New tags for{{ range . }}\n  - {{ .Repo }}({{ .Arch }})): {{ join .Tags \", \" }}{{ end }}"
 )
 
+type Registries map[*Registry]*RegistryClient
+
+var registryClient = make(Registries)
+
+func (r Registries) For(reg *Registry) *RegistryClient {
+	if r[reg] == nil {
+		r[reg] = NewRegistryClientFromConf(reg)
+	}
+	return r[reg]
+}
+
 func makeGuid(first string, strings ...string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(first))
@@ -125,8 +136,7 @@ func MakeFeed(conf *Conf) *[]byte {
 		repo := watchConf.Repo
 		arch := watchConf.Arch
 		reg := watchConf.Registry
-		client := NewRegistryClientFromConf(reg)
-		client.Login(repo)
+		client := registryClient.For(reg)
 		allTags := client.ListTags(repo)
 		sort.Sort(sort.Reverse(ByVersion(allTags)))
 		if watchConf.WatchNew {

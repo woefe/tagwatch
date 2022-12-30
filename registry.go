@@ -26,7 +26,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"sync"
 	"time"
 )
 
@@ -53,6 +52,7 @@ type ManifestResponse struct {
 	SchemaVersion int
 	MediaType     string
 	Manifests     []Manifest
+	contentDigest string
 }
 
 type TagDigest struct {
@@ -61,30 +61,44 @@ type TagDigest struct {
 }
 
 type RegistryClient struct {
-	client       http.Client
-	Auth         bool
-	AuthUsername string
-	AuthPassword string
-	AuthToken    string
-	AuthURL      string
-	BaseURL      string
+	client        http.Client
+	manifestCache map[string]*ManifestResponse
+	authToken     string
+	Auth          bool
+	AuthUsername  string
+	AuthPassword  string
+	AuthURL       string
+	BaseURL       string
 }
 
 func NewRegistryClientFromConf(reg *Registry) *RegistryClient {
 	return &RegistryClient{
-		client:       http.Client{Timeout: 60 * time.Second},
-		Auth:         reg.Auth,
-		AuthUsername: reg.AuthUsername,
-		AuthPassword: reg.AuthPassword,
-		AuthURL:      reg.AuthURL,
-		BaseURL:      reg.BaseURL,
+		client:        http.Client{Timeout: 60 * time.Second},
+		manifestCache: make(map[string]*ManifestResponse, 20),
+		Auth:          reg.Auth,
+		AuthUsername:  reg.AuthUsername,
+		AuthPassword:  reg.AuthPassword,
+		AuthURL:       reg.AuthURL,
+		BaseURL:       reg.BaseURL,
 	}
 }
 
-func (c *RegistryClient) get(url string, result interface{}, basicAuth bool) error {
-	request, err := http.NewRequest("GET", url, nil)
+func (c *RegistryClient) login(repo string) {
+	if c.Auth {
+		var authResponse AuthResponse
+		c.authToken = ""
+		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, true)
+		if err != nil {
+			log.Println(err)
+		}
+		c.authToken = authResponse.Token
+	}
+}
+
+func (c *RegistryClient) request(method, url string, basicAuth bool) (*http.Response, error) {
+	request, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	request.Header.Set("User-Agent", AgentStr)
@@ -94,17 +108,24 @@ func (c *RegistryClient) get(url string, result interface{}, basicAuth bool) err
 		request.SetBasicAuth(c.AuthUsername, c.AuthPassword)
 	}
 
-	if c.Auth && c.AuthToken != "" {
-		request.Header.Set("Authorization", "Bearer "+c.AuthToken)
+	if c.Auth && c.authToken != "" {
+		request.Header.Set("Authorization", "Bearer "+c.authToken)
 	}
 
 	response, err := c.client.Do(request)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	if response.StatusCode != 200 {
-		return fmt.Errorf("request failed with status code %d", response.StatusCode)
+		return nil, fmt.Errorf("request '%s %s'failed with status code %d", method, url, response.StatusCode)
+	}
+	return response, nil
+}
+
+func (c *RegistryClient) get(url string, result interface{}, basicAuth bool) error {
+	response, err := c.request("GET", url, basicAuth)
+	if err != nil {
+		return err
 	}
 
 	responseBody, err := io.ReadAll(response.Body)
@@ -116,6 +137,15 @@ func (c *RegistryClient) get(url string, result interface{}, basicAuth bool) err
 		return err
 	}
 	return nil
+}
+
+func (c *RegistryClient) head(url string, basicAuth bool) (http.Header, error) {
+	response, err := c.request("HEAD", url, basicAuth)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Header, nil
 }
 
 func matchesAny(tagPattern []string, str string) bool {
@@ -131,19 +161,47 @@ func matchesAny(tagPattern []string, str string) bool {
 	return false
 }
 
-func (c *RegistryClient) Login(repo string) {
-	if c.Auth {
-		var authResponse AuthResponse
-		err := c.get(c.AuthURL+"&scope=repository:"+repo+":pull", &authResponse, true)
-		if err != nil {
-			log.Println(err)
+func (c *RegistryClient) fetchManifest(repo, tag string) (*ManifestResponse, error) {
+	url := c.BaseURL + repo + "/manifests/" + tag
+
+	getManifest := func() (*ManifestResponse, error) {
+		var manifestResponse ManifestResponse
+		if err := c.get(url, &manifestResponse, false); err != nil {
+			return nil, err
 		}
-		c.AuthToken = authResponse.Token
+		return &manifestResponse, nil
 	}
+
+	manifestHeaders, err := c.head(url, false)
+	if err != nil {
+		// registry does seem to support HEAD /<repo>/manifests/<tag>
+		return getManifest()
+	}
+
+	digest := manifestHeaders.Get("Docker-Content-Digest")
+	if digest == "" {
+		// Docker-Content-Digest header missing in HEAD /<repo>/manifests/<tag>
+		return getManifest()
+	}
+
+	manifest := c.manifestCache[url]
+	if manifest == nil || manifest.contentDigest != digest {
+		// manifest cache empty or expired. Get and save response
+		manifest, err = getManifest()
+		if err != nil {
+			return nil, err
+		}
+		manifest.contentDigest = digest
+		c.manifestCache[url] = manifest
+	}
+
+	// cache hit. return the hit
+	return manifest, nil
 }
 
 func (c *RegistryClient) ListTags(repo string) []string {
 	var tagsResponse TagsResponse
+	c.login(repo)
 	url := c.BaseURL + repo + "/tags/list"
 	if err := c.get(url, &tagsResponse, false); err != nil {
 		log.Println(err)
@@ -153,41 +211,22 @@ func (c *RegistryClient) ListTags(repo string) []string {
 }
 
 func (c *RegistryClient) ListTagDigests(repo, architecture string, allTags, tagPattern []string) []TagDigest {
-	wg := sync.WaitGroup{}
-	results := make(chan struct {
-		tag      string
-		response ManifestResponse
-	})
-	for _, tag := range allTags {
-		wg.Add(1)
-		go func(tag string) {
-			defer wg.Done()
-			if !matchesAny(tagPattern, tag) {
-				return
-			}
-
-			var manifestResponse ManifestResponse
-			url := c.BaseURL + repo + "/manifests/" + tag
-			if err := c.get(url, &manifestResponse, false); err != nil {
-				log.Println(err)
-				return
-			}
-			results <- struct {
-				tag      string
-				response ManifestResponse
-			}{tag: tag, response: manifestResponse}
-		}(tag)
-	}
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
 	res := make([]TagDigest, 0, 100)
-	for r := range results {
-		for _, manifest := range r.response.Manifests {
+	c.login(repo)
+	for _, tag := range allTags {
+		if !matchesAny(tagPattern, tag) {
+			continue
+		}
+
+		manifestResponse, err := c.fetchManifest(repo, tag)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		for _, manifest := range manifestResponse.Manifests {
 			if manifest.Platform.Architecture == architecture {
-				res = append(res, TagDigest{r.tag, manifest.Digest})
+				res = append(res, TagDigest{tag, manifest.Digest})
 			}
 		}
 	}
