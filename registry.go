@@ -103,6 +103,7 @@ func (c *RegistryClient) request(method, url string, basicAuth bool) (*http.Resp
 
 	request.Header.Set("User-Agent", AgentStr)
 	request.Header.Set("Accept", "application/vnd.docker.distribution.manifest.list.v2+json")
+	request.Header.Add("Accept", "application/vnd.oci.image.index.v1+json")
 
 	if basicAuth && c.AuthUsername != "" && c.AuthPassword != "" {
 		request.SetBasicAuth(c.AuthUsername, c.AuthPassword)
@@ -117,7 +118,7 @@ func (c *RegistryClient) request(method, url string, basicAuth bool) (*http.Resp
 		return nil, err
 	}
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("request '%s %s'failed with status code %d", method, url, response.StatusCode)
+		return nil, fmt.Errorf("request '%s %s' failed with status code %d", method, url, response.StatusCode)
 	}
 	return response, nil
 }
