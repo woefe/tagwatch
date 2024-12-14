@@ -6,6 +6,9 @@ registries:
     # password: <token>
     auth_url: "https://auth.docker.io/token?service=registry.docker.io"
     base_url: "https://registry.hub.docker.com/v2/"
+  - &gcr
+    auth: false
+    base_url: "https://gcr.io/v2/"
 
 default: &default
   watch_new: true
@@ -24,6 +27,11 @@ tagwatch:
     tags:
       - ^latest$
       - ^1\.15$
+  - registry: *gcr
+    arch: "amd64"
+    repo: distroless/python3-debian12
+    tags:
+      - ^nonroot$
 
 # Configures the web server that is serving the generated feed with `tagwatch serve`.
 server:
