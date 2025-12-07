@@ -1,9 +1,8 @@
 FROM docker.io/golang:1.25-alpine AS builder
 
-RUN apk add --no-cache musl-dev gcc
 WORKDIR /build
 COPY ./* ./
-RUN go build -ldflags "-linkmode external -extldflags -static"
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w"
 
 FROM scratch
 WORKDIR /
