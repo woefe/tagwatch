@@ -20,8 +20,9 @@
 package main
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
+
+	"go.yaml.in/yaml/v3"
 )
 
 type Registry struct {
