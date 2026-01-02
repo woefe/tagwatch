@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024. Wolfgang Popp
+ * Copyright (c) 2026. Wolfgang Popp
  *
  * This file is part of tagwatch.
  *
