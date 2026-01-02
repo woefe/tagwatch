@@ -37,4 +37,4 @@ As of now, tagwatch is only tested against Docker Hub and the Google Container R
 ## Licenses
 Tagwatch is licensed under [GPLv3+](./COPYING).
 
-Tagwatch uses [go-yaml/yaml](https://github.com/go-yaml/yaml/tree/v2).
+Tagwatch uses [yaml/go-yaml](https://github.com/yaml/go-yaml).
