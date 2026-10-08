@@ -1,8 +1,8 @@
-FROM docker.io/golang:1.25-alpine AS builder
+FROM docker.io/golang:1.27.2-alpine3.24 AS builder
 
 WORKDIR /build
 COPY ./* ./
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w"
+RUN CGO_ENABLED=0 go build -trimpath -buildmode=pie -ldflags "-s -w"
 
 FROM scratch
 WORKDIR /
